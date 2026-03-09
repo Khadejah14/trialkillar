@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrialGuard — Never Get Charged Again</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #18181f;
+    --border: #1e1e2a;
+    --accent: #00e5a0;
+    --accent2: #ff4e6a;
+    --accent3: #6c63ff;
+    --text: #f0f0f5;
+    --muted: #5a5a72;
+    --warning: #ffb347;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .glow-orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .orb1 { width: 400px; height: 400px; background: rgba(0,229,160,0.07); top: -100px; right: -100px; }
+  .orb2 { width: 300px; height: 300px; background: rgba(108,99,255,0.07); bottom: 100px; left: -50px; }
+
+  /* HEADER */
+  header {
+    position: relative; z-index: 10;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 24px 48px;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+  }
+
+  .logo {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px;
+  }
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .logo span { color: var(--accent); }
+
+  .header-badges {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .badge {
+    padding: 6px 14px; border-radius: 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem; font-weight: 500; letter-spacing: 0.5px;
+    border: 1px solid;
+  }
+  .badge-nova { border-color: var(--accent3); color: var(--accent3); background: rgba(108,99,255,0.08); }
+  .badge-act { border-color: var(--accent); color: var(--accent); background: rgba(0,229,160,0.08); }
+
+  .connect-btn {
+    padding: 10px 22px;
+    background: var(--accent);
+    color: #000;
+    border: none; border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.85rem; font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .connect-btn:hover { background: #00ffb3; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,229,160,0.3); }
+
+  /* MAIN LAYOUT */
+  main {
+    position: relative; z-index: 5;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 48px 48px 80px;
+  }
+
+  /* HERO */
+  .hero {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 48px; align-items: center;
+    margin-bottom: 64px;
+    padding-bottom: 64px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .hero-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem; color: var(--accent);
+    letter-spacing: 2px; text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .hero-label::before { content: ''; display: block; width: 24px; height: 1px; background: var(--accent); }
+
+  h1 {
+    font-size: 3.2rem; font-weight: 800;
+    line-height: 1.05; letter-spacing: -1.5px;
+    margin-bottom: 20px;
+  }
+  h1 em { font-style: normal; color: var(--accent); }
+  h1 .strike {
+    position: relative; color: var(--muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--accent2);
+  }
+
+  .hero-desc {
+    color: var(--muted); line-height: 1.7;
+    font-size: 1rem; margin-bottom: 32px;
+  }
+
+  .hero-actions { display: flex; gap: 16px; align-items: center; }
+
+  .btn-primary {
+    padding: 14px 28px;
+    background: var(--accent); color: #000;
+    border: none; border-radius: 10px;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.95rem; font-weight: 700;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(0,229,160,0.35); }
+
+  .btn-ghost {
+    padding: 14px 28px;
+    background: transparent; color: var(--text);
+    border: 1px solid var(--border); border-radius: 10px;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.95rem; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* STATS BOX */
+  .hero-stats {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    position: relative; overflow: hidden;
+  }
+  .hero-stats::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent3), var(--accent2));
+  }
+
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .stat { text-align: center; }
+  .stat-num {
+    font-size: 2.2rem; font-weight: 800;
+    color: var(--accent); letter-spacing: -1px;
+    font-family: 'DM Mono', monospace;
+  }
+  .stat-label { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+
+  .stat-divider {
+    border: none; border-top: 1px solid var(--border);
+    grid-column: span 2; margin: 4px 0;
+  }
+
+  /* SECTION TITLES */
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .section-title {
+    font-size: 1.1rem; font-weight: 700; letter-spacing: -0.3px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-title .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  /* GMAIL SCAN SECTION */
+  .scan-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 32px;
+  }
+
+  .scan-header {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 24px;
+  }
+  .gmail-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: rgba(234,67,53,0.15);
+    border: 1px solid rgba(234,67,53,0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .scan-info h3 { font-size: 1rem; font-weight: 700; }
+  .scan-info p { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
+
+  .scan-status {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    padding: 4px 12px; border-radius: 20px;
+    background: rgba(0,229,160,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(0,229,160,0.2);
+    margin-left: auto;
+  }
+
+  /* AI SCAN LOG */
+  .scan-log {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    line-height: 2;
+    position: relative;
+    overflow: hidden;
+  }
+  .log-line { display: flex; gap: 12px; }
+  .log-time { color: var(--accent3); min-width: 60px; }
+  .log-event.found { color: var(--accent); }
+  .log-event.warn { color: var(--warning); }
+  .log-event.action { color: var(--accent3); }
+  .log-event.cancel { color: var(--accent2); }
+
+  .scan-cursor {
+    display: inline-block; width: 8px; height: 14px;
+    background: var(--accent);
+    animation: blink 1s infinite;
+    vertical-align: middle;
+  }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+  /* SUBSCRIPTIONS GRID */
+  .subs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .sub-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 24px;
+    transition: all 0.2s;
+    position: relative; overflow: hidden;
+    cursor: pointer;
+  }
+  .sub-card:hover { border-color: rgba(0,229,160,0.3); transform: translateY(-2px); }
+
+  .sub-card.urgent { border-color: rgba(255,78,106,0.4); }
+  .sub-card.urgent::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--accent2);
+  }
+  .sub-card.safe { border-color: rgba(0,229,160,0.2); }
+  .sub-card.safe::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--accent);
+  }
+  .sub-card.cancelled {
+    opacity: 0.5;
+  }
+
+  .sub-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .sub-brand {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .brand-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 800;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+  }
+  .brand-name { font-weight: 700; font-size: 0.95rem; }
+  .brand-plan { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+
+  .sub-status {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem; font-weight: 500;
+    padding: 4px 10px; border-radius: 12px;
+  }
+  .status-urgent { background: rgba(255,78,106,0.15); color: var(--accent2); border: 1px solid rgba(255,78,106,0.3); }
+  .status-safe { background: rgba(0,229,160,0.1); color: var(--accent); border: 1px solid rgba(0,229,160,0.2); }
+  .status-cancelled { background: rgba(90,90,114,0.2); color: var(--muted); border: 1px solid var(--border); }
+  .status-queued { background: rgba(108,99,255,0.15); color: var(--accent3); border: 1px solid rgba(108,99,255,0.3); }
+
+  .sub-meta {
+    display: flex; justify-content: space-between;
+    font-size: 0.8rem; color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .sub-meta span strong { color: var(--text); }
+
+  .trial-bar {
+    height: 4px; background: var(--border); border-radius: 2px;
+    margin-bottom: 16px; overflow: hidden;
+  }
+  .trial-bar-fill {
+    height: 100%; border-radius: 2px;
+    transition: width 0.8s ease;
+  }
+  .fill-urgent { background: var(--accent2); }
+  .fill-safe { background: var(--accent); }
+  .fill-queued { background: var(--accent3); }
+
+  .sub-actions {
+    display: flex; gap: 8px;
+  }
+  .btn-cancel {
+    flex: 1; padding: 9px;
+    background: rgba(255,78,106,0.1);
+    color: var(--accent2);
+    border: 1px solid rgba(255,78,106,0.25); border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.8rem; font-weight: 700;
+    cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .btn-cancel:hover { background: rgba(255,78,106,0.2); border-color: var(--accent2); }
+  .btn-cancel:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-auto {
+    flex: 1; padding: 9px;
+    background: rgba(0,229,160,0.08);
+    color: var(--accent);
+    border: 1px solid rgba(0,229,160,0.2); border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.8rem; font-weight: 700;
+    cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .btn-auto:hover { background: rgba(0,229,160,0.15); border-color: var(--accent); }
+  .btn-auto.queued {
+    background: rgba(108,99,255,0.1);
+    color: var(--accent3);
+    border-color: rgba(108,99,255,0.3);
+    cursor: default;
+  }
+
+  /* NOVA ACT PANEL */
+  .nova-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 32px;
+    position: relative; overflow: hidden;
+  }
+  .nova-panel::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent3), var(--accent));
+  }
+
+  .nova-header {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 24px;
+  }
+  .nova-logo {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent3), var(--accent));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+
+  .agent-steps {
+    display: flex; flex-direction: column; gap: 0;
+  }
+  .agent-step {
+    display: flex; align-items: flex-start; gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    animation: fadeSlideIn 0.4s ease both;
+  }
+  .agent-step:last-child { border-bottom: none; }
+
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .step-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem; font-weight: 500;
+    flex-shrink: 0; margin-top: 2px;
+  }
+  .step-pending { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); }
+  .step-done { background: rgba(0,229,160,0.15); border: 1px solid rgba(0,229,160,0.3); color: var(--accent); }
+  .step-active { background: rgba(108,99,255,0.15); border: 1px solid rgba(108,99,255,0.4); color: var(--accent3); animation: stepPulse 1s infinite; }
+  @keyframes stepPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(108,99,255,0.3); } 50% { box-shadow: 0 0 0 6px rgba(108,99,255,0); } }
+
+  .step-content { flex: 1; }
+  .step-title { font-size: 0.85rem; font-weight: 700; margin-bottom: 4px; }
+  .step-desc { font-size: 0.78rem; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .step-desc.active { color: var(--accent3); }
+  .step-desc.done { color: var(--accent); }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+    display: none; align-items: center; justify-content: center;
+  }
+  .modal-overlay.active { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 460px; width: 90%;
+    position: relative;
+    animation: modalIn 0.3s ease;
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .modal-close {
+    position: absolute; top: 20px; right: 20px;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--muted); border-radius: 6px;
+    width: 28px; height: 28px; cursor: pointer;
+    font-size: 14px; display: flex; align-items: center; justify-content: center;
+  }
+  .modal h2 { font-size: 1.3rem; font-weight: 800; margin-bottom: 8px; }
+  .modal p { color: var(--muted); font-size: 0.85rem; line-height: 1.6; margin-bottom: 24px; }
+
+  .modal-progress {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px; margin-bottom: 24px;
+    font-family: 'DM Mono', monospace; font-size: 0.75rem;
+    color: var(--muted); line-height: 2;
+  }
+  .modal-progress .done { color: var(--accent); }
+  .modal-progress .active { color: var(--accent3); }
+
+  .modal-actions { display: flex; gap: 12px; }
+
+  /* TIMELINE */
+  .timeline {
+    position: relative;
+    padding-left: 24px;
+  }
+  .timeline::before {
+    content: ''; position: absolute; left: 7px; top: 8px; bottom: 8px;
+    width: 2px; background: var(--border);
+  }
+  .timeline-item {
+    position: relative; margin-bottom: 20px;
+    padding-left: 20px;
+  }
+  .timeline-dot {
+    position: absolute; left: -17px; top: 4px;
+    width: 12px; height: 12px; border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--bg);
+  }
+  .timeline-dot.active { border-color: var(--accent); background: var(--accent); }
+  .timeline-dot.warn { border-color: var(--warning); background: var(--warning); }
+  .timeline-date { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--muted); }
+  .timeline-event { font-size: 0.85rem; font-weight: 600; margin-top: 2px; }
+  .timeline-note { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+
+  /* FOOTER */
+  footer {
+    position: relative; z-index: 5;
+    border-top: 1px solid var(--border);
+    padding: 24px 48px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .footer-left { font-size: 0.8rem; color: var(--muted); }
+  .footer-left strong { color: var(--accent); }
+  .footer-badges { display: flex; gap: 8px; }
+  .tech-badge {
+    font-family: 'DM Mono', monospace; font-size: 0.68rem;
+    padding: 4px 10px; border-radius: 4px;
+    background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 32px; right: 32px; z-index: 200;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 12px; padding: 14px 20px;
+    display: flex; align-items: center; gap: 12px;
+    font-size: 0.85rem; font-weight: 600;
+    transform: translateY(80px); opacity: 0;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 32px rgba(0,229,160,0.15);
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast-icon { font-size: 18px; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    header { padding: 16px 20px; }
+    main { padding: 24px 20px; }
+    .hero { grid-template-columns: 1fr; gap: 32px; }
+    h1 { font-size: 2.2rem; }
+    .subs-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="glow-orb orb1"></div>
+<div class="glow-orb orb2"></div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🛡</div>
+    Trial<span>Guard</span>
+  </div>
+  <div class="header-badges">
+    <div class="badge badge-nova">Amazon Nova</div>
+    <div class="badge badge-act">Nova Act Agent</div>
+  </div>
+  <button class="connect-btn" onclick="handleGmailConnect()">
+    <span>📧</span> Connect Gmail
+  </button>
+</header>
+
+<!-- MAIN -->
+<main>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div>
+      <div class="hero-label">AI-Powered Subscription Shield</div>
+      <h1>Stop getting<br><span class="strike">charged</span><br><em>automatically.</em></h1>
+      <p class="hero-desc">
+        TrialGuard scans your inbox, tracks every free trial, and uses <strong>Amazon Nova Act</strong> to automatically cancel before you're charged — without lifting a finger.
+      </p>
+      <div class="hero-actions">
+        <button class="btn-primary" onclick="startScan()">🔍 Scan My Inbox</button>
+        <button class="btn-ghost" onclick="showDemo()">View Demo</button>
+      </div>
+    </div>
+    <div class="hero-stats">
+      <div class="stats-grid">
+        <div class="stat">
+          <div class="stat-num" id="stat-saved">$247</div>
+          <div class="stat-label">Saved this month</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" id="stat-cancelled">6</div>
+          <div class="stat-label">Trials cancelled</div>
+        </div>
+        <hr class="stat-divider">
+        <div class="stat">
+          <div class="stat-num" id="stat-active">3</div>
+          <div class="stat-label">Active trials</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" id="stat-upcoming">1</div>
+          <div class="stat-label">Expiring soon</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GMAIL SCAN LOG -->
+  <div class="scan-section" id="scan-section">
+    <div class="scan-header">
+      <div class="gmail-icon">📧</div>
+      <div class="scan-info">
+        <h3>Nova AI — Inbox Scanner</h3>
+        <p>Analyzing emails for free trial confirmations using Amazon Nova 2 Lite multimodal</p>
+      </div>
+      <div class="scan-status" id="scan-badge">● LIVE SCANNING</div>
+    </div>
+    <div class="scan-log" id="scan-log">
+      <div class="log-line"><span class="log-time">09:14:02</span><span class="log-event found">✓ Found trial: Netflix — expires Mar 14</span></div>
+      <div class="log-line"><span class="log-time">09:14:03</span><span class="log-event found">✓ Found trial: Notion AI — expires Mar 28</span></div>
+      <div class="log-line"><span class="log-time">09:14:04</span><span class="log-event warn">⚠ Expiring in 2 days: Adobe Creative Cloud</span></div>
+      <div class="log-line"><span class="log-time">09:14:05</span><span class="log-event action">→ Queued Nova Act agent for Adobe cancellation</span></div>
+      <div class="log-line"><span class="log-time">09:14:06</span><span class="log-event found">✓ Found trial: Spotify Premium — expires Apr 3</span></div>
+      <div class="log-line"><span class="log-time">09:14:07</span><span class="log-event cancel">✗ Previously cancelled: Canva Pro (saved $15/mo)</span></div>
+      <div class="log-line"><span class="log-time">09:14:08</span><span class="log-event action">→ Scan complete. 4 active trials found. <span class="scan-cursor"></span></span></div>
+    </div>
+  </div>
+
+  <!-- SUBSCRIPTIONS -->
+  <div class="section-header">
+    <div class="section-title"><div class="dot"></div> Active Trials</div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted)">4 detected · 1 urgent</div>
+  </div>
+
+  <div class="subs-grid" id="subs-grid">
+    <div style="color:var(--muted);font-size:0.9rem;padding:32px 0;grid-column:span 2;">
+      Connect Gmail and scan your inbox to detect free trials.
+    </div>
+  </div>
+
+  <!-- NOVA ACT AGENT PANEL -->
+  <div class="nova-panel" id="nova-panel">
+    <div class="nova-header">
+      <div class="nova-logo">⚡</div>
+      <div>
+        <h3 style="font-size:1rem;font-weight:700;">Nova Act Agent — Live View</h3>
+        <p style="font-size:0.8rem;color:var(--muted);margin-top:4px;">Real-time browser automation powered by Amazon Nova Act</p>
+      </div>
+      <div class="badge badge-nova" style="margin-left:auto;">AGENT ACTIVE</div>
+    </div>
+
+    <div class="agent-steps" id="agent-steps">
+      <div class="agent-step">
+        <div class="step-num step-done">✓</div>
+        <div class="step-content">
+          <div class="step-title">Inbox Scan Complete</div>
+          <div class="step-desc done">Nova 2 Lite identified 4 trial emails · confidence 98.2%</div>
+        </div>
+      </div>
+      <div class="agent-step">
+        <div class="step-num step-done">✓</div>
+        <div class="step-content">
+          <div class="step-title">Risk Assessment</div>
+          <div class="step-desc done">Adobe Creative Cloud flagged as URGENT — 2 days until $59.99 charge</div>
+        </div>
+      </div>
+      <div class="agent-step" id="step-navigate">
+        <div class="step-num step-active">3</div>
+        <div class="step-content">
+          <div class="step-title">Navigating to Adobe Account Portal</div>
+          <div class="step-desc active">nova_act.browse("adobe.com/account") → loading cancellation flow...</div>
+        </div>
+      </div>
+      <div class="agent-step" id="step-find">
+        <div class="step-num step-pending">4</div>
+        <div class="step-content">
+          <div class="step-title">Locating Cancel Subscription Button</div>
+          <div class="step-desc">nova_act.find_element("cancel plan") → waiting...</div>
+        </div>
+      </div>
+      <div class="agent-step" id="step-confirm">
+        <div class="step-num step-pending">5</div>
+        <div class="step-content">
+          <div class="step-title">Confirm Cancellation</div>
+          <div class="step-desc">nova_act.click_and_confirm() → pending user approval</div>
+        </div>
+      </div>
+      <div class="agent-step" id="step-verify">
+        <div class="step-num step-pending">6</div>
+        <div class="step-content">
+          <div class="step-title">Verify & Screenshot Confirmation</div>
+          <div class="step-desc">nova_act.verify_cancellation() → save confirmation email</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:24px;display:flex;gap:12px;">
+      <button class="btn-primary" onclick="startScan()">🔍 Re-scan Inbox</button>
+      <button class="btn-ghost" onclick="loadSubscriptions()">↻ Refresh Status</button>
+    </div>
+  </div>
+
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-left">Built for <strong>Amazon Nova Hackathon 2025</strong> — TrialGuard v0.1</div>
+  <div class="footer-badges">
+    <div class="tech-badge">Amazon Nova Act</div>
+    <div class="tech-badge">Nova 2 Lite</div>
+    <div class="tech-badge">Gmail API</div>
+    <div class="tech-badge">AWS Lambda</div>
+  </div>
+</footer>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h2 id="modal-title">🤖 Nova Act: Cancelling Adobe</h2>
+    <p id="modal-desc">Nova Act agent is navigating to Adobe's account portal and will automatically cancel your Creative Cloud trial. You'll receive email confirmation.</p>
+    <div class="modal-progress" id="modal-progress">
+      <div class="done">✓ Authenticated with Adobe account</div>
+      <div class="done">✓ Navigated to Plan Management page</div>
+      <div class="active">→ Clicking "Cancel Plan" button...</div>
+      <div>○ Confirming cancellation reason</div>
+      <div>○ Saving confirmation screenshot</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" style="flex:1" onclick="completeCancel()">🤖 Launch Nova Act Agent</button>
+      <button class="btn-ghost" onclick="closeModal()">Not now</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <span class="toast-icon">✅</span>
+  <span id="toast-msg">Cancelled successfully — you saved $59.99!</span>
+</div>
+
+<script>
+  // ─── Config ────────────────────────────────────────────────────────────────
+  const API = 'http://localhost:8000';
+
+  // ─── State ─────────────────────────────────────────────────────────────────
+  let userId = localStorage.getItem('trialguard_user_id') || null;
+  let activeSubId = null;       // subscription ID being acted on
+  let activeJobId = null;       // running cancellation job ID
+  let jobPollInterval = null;   // setInterval handle for job polling
+
+  // ─── Init ──────────────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    // If we're returning from Google OAuth callback (?user_id=...)
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('user_id')) {
+      userId = params.get('user_id');
+      localStorage.setItem('trialguard_user_id', userId);
+      window.history.replaceState({}, '', '/');
+      showToast('📧 Gmail connected! Ready to scan.');
+      updateConnectBtn(true);
+    }
+
+    if (userId) {
+      updateConnectBtn(true);
+      loadSubscriptions();
+    }
+  });
+
+  function updateConnectBtn(connected) {
+    const btn = document.querySelector('.connect-btn');
+    if (connected) {
+      btn.textContent = '✓ Gmail Connected';
+      btn.style.background = 'rgba(0,229,160,0.15)';
+      btn.style.color = 'var(--accent)';
+      btn.style.border = '1px solid rgba(0,229,160,0.3)';
+    }
+  }
+
+  // ─── Auth: Google OAuth ────────────────────────────────────────────────────
+  async function handleGmailConnect() {
+    if (userId) {
+      // Already connected — trigger a fresh scan
+      await startScan();
+      return;
+    }
+    try {
+      const res = await fetch(`${API}/auth/google`, { method: 'POST' });
+      const data = await res.json();
+      // Redirect user to Google consent screen
+      window.location.href = data.auth_url;
+    } catch (e) {
+      showToast('❌ Could not reach backend. Is it running on :8000?', 'error');
+    }
+  }
+
+  // ─── Scan Gmail ────────────────────────────────────────────────────────────
+  async function startScan() {
+    if (!userId) {
+      showToast('⚠ Connect Gmail first.');
+      return;
+    }
+
+    const badge = document.getElementById('scan-badge');
+    badge.textContent = '● SCANNING...';
+    appendLog('action', '→ Sending scan request to backend...');
+
+    try {
+      const res = await fetch(`${API}/scan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, max_emails: 500 }),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+
+      appendLog('found', `✓ Scanned ${data.emails_scanned} emails in ${data.scan_duration_seconds.toFixed(1)}s`);
+      appendLog('found', `✓ Found ${data.trials_found} free trial(s)`);
+
+      if (data.trials_found === 0) {
+        appendLog('action', '→ No new trials detected.');
+      }
+
+      badge.textContent = '● LIVE SCANNING';
+      showToast(`✅ Scan complete — ${data.trials_found} trial(s) found`);
+
+      // Refresh subscription cards
+      await loadSubscriptions();
+
+    } catch (e) {
+      appendLog('warn', `⚠ Scan failed: ${e.message}`);
+      badge.textContent = '● ERROR';
+      showToast('❌ Scan failed. Check console.', 'error');
+    }
+  }
+
+  function appendLog(type, text) {
+    const log = document.getElementById('scan-log');
+    const now = new Date().toTimeString().slice(0, 8);
+    const div = document.createElement('div');
+    div.className = 'log-line';
+    div.innerHTML = `<span class="log-time">${now}</span><span class="log-event ${type}">${text}</span>`;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  // ─── Load Subscriptions ────────────────────────────────────────────────────
+  async function loadSubscriptions() {
+    if (!userId) return;
+
+    try {
+      const res = await fetch(`${API}/subscriptions/${userId}`);
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+
+      renderSubscriptions(data.subscriptions);
+      updateStats(data);
+
+    } catch (e) {
+      console.error('Failed to load subscriptions:', e);
+    }
+  }
+
+  function updateStats(data) {
+    const subs = data.subscriptions || [];
+    const cancelled = subs.filter(s => s.status === 'cancelled').length;
+    const active = subs.filter(s => ['active','urgent','queued'].includes(s.status)).length;
+    const urgent = data.urgent_count || 0;
+    const saved = subs
+      .filter(s => s.status === 'cancelled')
+      .reduce((acc, s) => acc + s.monthly_charge, 0);
+
+    document.getElementById('stat-saved').textContent = `$${saved.toFixed(0)}`;
+    document.getElementById('stat-cancelled').textContent = cancelled;
+    document.getElementById('stat-active').textContent = active;
+    document.getElementById('stat-upcoming').textContent = urgent;
+  }
+
+  function daysRemaining(trialEndDate) {
+    const diff = new Date(trialEndDate) - new Date();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  }
+
+  function renderSubscriptions(subs) {
+    const grid = document.getElementById('subs-grid');
+    if (!subs || subs.length === 0) {
+      grid.innerHTML = `<div style="color:var(--muted);font-size:0.9rem;padding:32px 0;">
+        No subscriptions tracked yet. Connect Gmail and scan your inbox.
+      </div>`;
+      return;
+    }
+
+    grid.innerHTML = subs.map(sub => {
+      const days = daysRemaining(sub.trial_end_date);
+      const isUrgent = sub.status === 'urgent' || days <= 3;
+      const isCancelled = sub.status === 'cancelled';
+      const isQueued = sub.status === 'queued';
+
+      const cardClass = isCancelled ? 'cancelled' : isUrgent ? 'urgent' : 'safe';
+      const statusLabel = isCancelled ? 'CANCELLED' : isQueued ? 'QUEUED' : isUrgent ? `${days} DAYS LEFT` : `${days} DAYS LEFT`;
+      const statusClass = isCancelled ? 'status-cancelled' : isQueued ? 'status-queued' : isUrgent ? 'status-urgent' : 'status-safe';
+      const fillClass = isCancelled ? 'fill-safe' : isQueued ? 'fill-queued' : isUrgent ? 'fill-urgent' : 'fill-safe';
+      const fillPct = Math.min(100, Math.max(5, Math.round((days / 30) * 100)));
+
+      const expiry = new Date(sub.trial_end_date).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+
+      const disabledAttr = isCancelled ? 'disabled' : '';
+      const queuedClass = isQueued ? 'queued' : '';
+      const queuedText = isQueued ? '⏳ Queued' : '⚡ Auto-Cancel';
+
+      return `
+        <div class="sub-card ${cardClass}" id="card-${sub.id}">
+          <div class="sub-top">
+            <div class="sub-brand">
+              <div class="brand-icon">${sub.service_name.charAt(0)}</div>
+              <div>
+                <div class="brand-name">${sub.service_name}</div>
+                <div class="brand-plan">${sub.plan_name}</div>
+              </div>
+            </div>
+            <div class="sub-status ${statusClass}">${statusLabel}</div>
+          </div>
+          <div class="sub-meta">
+            <span>Expires <strong>${expiry}</strong></span>
+            <span>Would charge <strong style="color:var(--accent2)">$${sub.monthly_charge.toFixed(2)}/mo</strong></span>
+          </div>
+          <div class="trial-bar"><div class="trial-bar-fill ${fillClass}" style="width:${fillPct}%"></div></div>
+          <div class="sub-actions">
+            <button class="btn-cancel" onclick="cancelNow('${sub.id}', '${sub.service_name}')" ${disabledAttr}>✕ Cancel Now</button>
+            <button class="btn-auto ${queuedClass}" id="auto-${sub.id}" onclick="queueNova('${sub.id}', '${sub.service_name}')" ${isQueued || isCancelled ? 'disabled' : ''}>${queuedText}</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // ─── Queue Auto-Cancel ─────────────────────────────────────────────────────
+  async function queueNova(subId, name) {
+    if (!userId) return;
+    try {
+      const res = await fetch(`${API}/queue/${subId}?user_id=${userId}`, { method: 'POST' });
+      if (!res.ok) throw new Error(await res.text());
+
+      const btn = document.getElementById(`auto-${subId}`);
+      if (btn) { btn.classList.add('queued'); btn.textContent = '⏳ Queued'; btn.disabled = true; }
+
+      showToast(`⚡ ${name} queued — Nova Act will auto-cancel before trial ends`);
+      await loadSubscriptions();
+    } catch (e) {
+      showToast(`❌ Could not queue: ${e.message}`, 'error');
+    }
+  }
+
+  // ─── Cancel Now (Nova Act) ─────────────────────────────────────────────────
+  function cancelNow(subId, name) {
+    activeSubId = subId;
+    document.getElementById('modal-title').textContent = `🤖 Nova Act: Cancelling ${name}`;
+    document.getElementById('modal-desc').textContent =
+      `Nova Act will navigate to ${name}'s cancellation page and complete the process automatically.`;
+    resetModalProgress();
+    document.getElementById('modal').classList.add('active');
+  }
+
+  function resetModalProgress() {
+    document.getElementById('modal-progress').innerHTML = `
+      <div>○ Launching Nova Act browser agent</div>
+      <div>○ Navigating to cancellation page</div>
+      <div>○ Locating cancel button</div>
+      <div>○ Confirming cancellation</div>
+      <div>○ Saving confirmation</div>`;
+  }
+
+  async function completeCancel() {
+    if (!userId || !activeSubId) return;
+    closeModal();
+
+    showToast('🤖 Nova Act agent launched...');
+    appendLog('action', `→ Firing Nova Act cancellation agent...`);
+
+    try {
+      const res = await fetch(`${API}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscription_id: activeSubId, user_id: userId }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+
+      activeJobId = data.job_id;
+      appendLog('action', `→ Job started: ${activeJobId}`);
+
+      // Begin polling job status
+      startJobPolling(activeJobId);
+
+    } catch (e) {
+      showToast(`❌ Failed to start agent: ${e.message}`, 'error');
+      appendLog('warn', `⚠ Cancellation failed: ${e.message}`);
+    }
+  }
+
+  // ─── Job Polling ───────────────────────────────────────────────────────────
+  function startJobPolling(jobId) {
+    if (jobPollInterval) clearInterval(jobPollInterval);
+
+    jobPollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`${API}/jobs/${jobId}?user_id=${userId}`);
+        if (!res.ok) return;
+        const job = await res.json();
+
+        updateNovaPanel(job);
+
+        if (['success', 'failed', 'requires_human'].includes(job.status)) {
+          clearInterval(jobPollInterval);
+          jobPollInterval = null;
+
+          if (job.status === 'success') {
+            showToast(`✅ ${job.message}`);
+            appendLog('found', `✓ ${job.message}`);
+          } else if (job.status === 'requires_human') {
+            showToast('⚠ Agent needs your help — check the service manually', 'error');
+            appendLog('warn', `⚠ ${job.message}`);
+          } else {
+            showToast(`❌ ${job.message}`, 'error');
+            appendLog('warn', `⚠ ${job.message}`);
+          }
+
+          await loadSubscriptions();
+        }
+      } catch (e) {
+        console.error('Polling error:', e);
+      }
+    }, 2000); // poll every 2 seconds
+  }
+
+  function updateNovaPanel(job) {
+    const steps = job.steps_completed || [];
+    const container = document.getElementById('agent-steps');
+
+    // Rebuild steps from real job log
+    container.innerHTML = steps.map((step, i) => {
+      const isLast = i === steps.length - 1;
+      const isDone = !isLast || job.status === 'success';
+      const numClass = isDone ? 'step-done' : 'step-active';
+      const numText = isDone ? '✓' : (i + 1);
+      const descClass = isDone ? 'done' : 'active';
+
+      return `
+        <div class="agent-step">
+          <div class="step-num ${numClass}">${numText}</div>
+          <div class="step-content">
+            <div class="step-title">Step ${i + 1}</div>
+            <div class="step-desc ${descClass}">${step}</div>
+          </div>
+        </div>`;
+    }).join('');
+
+    // Update badge
+    const badge = document.querySelector('.nova-panel .badge-nova');
+    if (badge) {
+      const labels = { pending: 'QUEUED', in_progress: 'AGENT ACTIVE', success: 'COMPLETE', failed: 'FAILED', requires_human: 'NEEDS HELP' };
+      badge.textContent = labels[job.status] || job.status.toUpperCase();
+    }
+  }
+
+  // ─── Helpers ───────────────────────────────────────────────────────────────
+  function closeModal() {
+    document.getElementById('modal').classList.remove('active');
+  }
+
+  function showDemo() {
+    appendLog('action', '→ Demo mode — showing sample data...');
+    showToast('👀 Demo mode — connect Gmail for real data');
+  }
+
+  function showToast(msg, type = 'success') {
+    const toast = document.getElementById('toast');
+    const icon = document.querySelector('.toast-icon');
+    icon.textContent = type === 'error' ? '❌' : '✅';
+    document.getElementById('toast-msg').textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 4000);
+  }
+</script>
+</body>
+</html>
