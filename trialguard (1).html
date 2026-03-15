@@ -589,7 +589,7 @@
       </p>
       <div class="hero-actions">
         <button class="btn-primary" onclick="startScan()">🔍 Scan My Inbox</button>
-        <button class="btn-ghost" onclick="showDemo()">View Demo</button>
+        <button class="btn-ghost" onclick="showDemo()">🎭 Try Demo</button>
       </div>
     </div>
     <div class="hero-stats">
@@ -755,22 +755,61 @@
 
   // ─── State ─────────────────────────────────────────────────────────────────
   let userId = localStorage.getItem('trialguard_user_id') || null;
-  let activeSubId = null;       // subscription ID being acted on
-  let activeJobId = null;       // running cancellation job ID
-  let jobPollInterval = null;   // setInterval handle for job polling
+  let activeSubId = null;
+  let activeJobId = null;
+  let jobPollInterval = null;
+  let isDemoMode = false;
+
+  // ─── Demo Data ─────────────────────────────────────────────────────────────
+  const DEMO_SUBS = [
+    { id: 'demo-1', user_id: 'demo', service_name: 'Adobe Creative Cloud', plan_name: 'All Apps', trial_end_date: daysFromNow(2),  monthly_charge: 59.99, status: 'urgent',  cancellation_url: 'https://account.adobe.com/plans' },
+    { id: 'demo-2', user_id: 'demo', service_name: 'Netflix',              plan_name: 'Standard', trial_end_date: daysFromNow(5),  monthly_charge: 15.49, status: 'urgent',  cancellation_url: 'https://netflix.com/cancelplan' },
+    { id: 'demo-3', user_id: 'demo', service_name: 'Notion AI',            plan_name: 'Team Plan', trial_end_date: daysFromNow(19), monthly_charge: 16.00, status: 'active',  cancellation_url: 'https://notion.so/my-account' },
+    { id: 'demo-4', user_id: 'demo', service_name: 'Spotify Premium',      plan_name: 'Individual', trial_end_date: daysFromNow(25), monthly_charge: 11.99, status: 'active', cancellation_url: 'https://spotify.com/account' },
+    { id: 'demo-5', user_id: 'demo', service_name: 'LinkedIn Premium',     plan_name: 'Career',   trial_end_date: daysFromNow(8),  monthly_charge: 39.99, status: 'active',  cancellation_url: 'https://linkedin.com/premium/manage' },
+    { id: 'demo-6', user_id: 'demo', service_name: 'Canva Pro',            plan_name: 'Pro Plan', trial_end_date: daysFromNow(14), monthly_charge: 14.99, status: 'cancelled', cancellation_url: 'https://canva.com/settings' },
+  ];
+
+  const DEMO_SCAN_LOGS = [
+    ['found',  '✓ Connected to Gmail — scanning 1,247 emails...'],
+    ['action', '→ Filtering by trial/subscription keywords...'],
+    ['found',  '✓ adobe.com: "Your Creative Cloud trial starts today"'],
+    ['found',  '✓ netflix.com: "Welcome! Your free trial has begun"'],
+    ['warn',   '⚠ adobe.com trial expires in 2 days — URGENT'],
+    ['found',  '✓ spotify.com: "Enjoy 1 month of Premium free"'],
+    ['found',  '✓ linkedin.com: "Your Premium Career trial is active"'],
+    ['found',  '✓ notion.so: "You\'re on the Team plan free trial"'],
+    ['cancel', '✗ canva.com: Previously cancelled — saved $14.99/mo'],
+    ['action', '→ Scan complete. 5 active trials detected in 3.2s ✓'],
+  ];
+
+  const DEMO_CANCEL_STEPS = [
+    { type: 'action', text: '→ Nova Act launching headless Chrome browser...' },
+    { type: 'action', text: '→ Navigating to cancellation page...' },
+    { type: 'found',  text: '✓ Page loaded — account portal detected' },
+    { type: 'action', text: '→ Locating "Cancel Plan" button...' },
+    { type: 'found',  text: '✓ Button found — clicking...' },
+    { type: 'action', text: '→ Handling retention offer — declining...' },
+    { type: 'found',  text: '✓ Cancellation confirmed!' },
+    { type: 'found',  text: '✓ Confirmation email saved to your records' },
+  ];
+
+  function daysFromNow(days) {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    return d.toISOString();
+  }
 
   // ─── Init ──────────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {
-    // If we're returning from Google OAuth callback (?user_id=...)
     const params = new URLSearchParams(window.location.search);
     if (params.get('user_id')) {
       userId = params.get('user_id');
       localStorage.setItem('trialguard_user_id', userId);
-      window.history.replaceState({}, '', '/');
+      window.history.replaceState({}, '', window.location.pathname);
       showToast('📧 Gmail connected! Ready to scan.');
       updateConnectBtn(true);
     }
-
     if (userId) {
       updateConnectBtn(true);
       loadSubscriptions();
@@ -780,40 +819,64 @@
   function updateConnectBtn(connected) {
     const btn = document.querySelector('.connect-btn');
     if (connected) {
-      btn.textContent = '✓ Gmail Connected';
-      btn.style.background = 'rgba(0,229,160,0.15)';
-      btn.style.color = 'var(--accent)';
-      btn.style.border = '1px solid rgba(0,229,160,0.3)';
+      btn.innerHTML = '✓ Gmail Connected';
+      btn.style.cssText = 'background:rgba(0,229,160,0.12);color:var(--accent);border:1px solid rgba(0,229,160,0.3);padding:10px 22px;border-radius:8px;font-family:Syne,sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer;';
     }
   }
 
-  // ─── Auth: Google OAuth ────────────────────────────────────────────────────
+  // ─── Demo Mode ─────────────────────────────────────────────────────────────
+  function showDemo() {
+    isDemoMode = true;
+    updateConnectBtn(true);
+    document.querySelector('.connect-btn').innerHTML = '🎭 Demo Mode';
+
+    // Clear log
+    document.getElementById('scan-log').innerHTML = '';
+    document.getElementById('scan-badge').textContent = '● SCANNING...';
+
+    // Animate scan log line by line
+    let i = 0;
+    const interval = setInterval(() => {
+      if (i >= DEMO_SCAN_LOGS.length) {
+        clearInterval(interval);
+        document.getElementById('scan-badge').textContent = '● LIVE SCANNING';
+        showToast('✅ Demo scan complete — 5 trials detected!');
+
+        // Render cards after scan finishes
+        renderSubscriptions(DEMO_SUBS);
+        updateStats({ subscriptions: DEMO_SUBS, urgent_count: 2 });
+        return;
+      }
+      const [type, text] = DEMO_SCAN_LOGS[i++];
+      appendLog(type, text);
+    }, 500);
+
+    // Reset nova panel
+    document.getElementById('agent-steps').innerHTML = `
+      <div style="color:var(--muted);font-size:0.85rem;padding:16px 0;">
+        Click "Cancel Now" on any card to see Nova Act in action.
+      </div>`;
+  }
+
+  // ─── Auth ──────────────────────────────────────────────────────────────────
   async function handleGmailConnect() {
-    if (userId) {
-      // Already connected — trigger a fresh scan
-      await startScan();
-      return;
-    }
+    if (isDemoMode || userId) { await startScan(); return; }
     try {
       const res = await fetch(`${API}/auth/google`, { method: 'POST' });
       const data = await res.json();
-      // Redirect user to Google consent screen
       window.location.href = data.auth_url;
     } catch (e) {
-      showToast('❌ Could not reach backend. Is it running on :8000?', 'error');
+      showToast('❌ Backend not running. Try Demo Mode instead.', 'error');
     }
   }
 
-  // ─── Scan Gmail ────────────────────────────────────────────────────────────
+  // ─── Real Scan ─────────────────────────────────────────────────────────────
   async function startScan() {
-    if (!userId) {
-      showToast('⚠ Connect Gmail first.');
-      return;
-    }
+    if (isDemoMode) { showDemo(); return; }
+    if (!userId) { showToast('⚠ Connect Gmail first.'); return; }
 
-    const badge = document.getElementById('scan-badge');
-    badge.textContent = '● SCANNING...';
-    appendLog('action', '→ Sending scan request to backend...');
+    document.getElementById('scan-badge').textContent = '● SCANNING...';
+    appendLog('action', '→ Scanning your inbox...');
 
     try {
       const res = await fetch(`${API}/scan`, {
@@ -821,27 +884,18 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: userId, max_emails: 500 }),
       });
-
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
 
-      appendLog('found', `✓ Scanned ${data.emails_scanned} emails in ${data.scan_duration_seconds.toFixed(1)}s`);
-      appendLog('found', `✓ Found ${data.trials_found} free trial(s)`);
-
-      if (data.trials_found === 0) {
-        appendLog('action', '→ No new trials detected.');
-      }
-
-      badge.textContent = '● LIVE SCANNING';
-      showToast(`✅ Scan complete — ${data.trials_found} trial(s) found`);
-
-      // Refresh subscription cards
+      appendLog('found', `✓ Scanned ${data.emails_scanned} emails in ${data.scan_duration_seconds}s`);
+      appendLog('found', `✓ Found ${data.trials_found} trial(s)`);
+      document.getElementById('scan-badge').textContent = '● LIVE SCANNING';
+      showToast(`✅ ${data.trials_found} trial(s) found`);
       await loadSubscriptions();
-
     } catch (e) {
-      appendLog('warn', `⚠ Scan failed: ${e.message}`);
-      badge.textContent = '● ERROR';
-      showToast('❌ Scan failed. Check console.', 'error');
+      appendLog('warn', `⚠ ${e.message}`);
+      document.getElementById('scan-badge').textContent = '● ERROR';
+      showToast('❌ Scan failed — is the backend running?', 'error');
     }
   }
 
@@ -857,16 +911,14 @@
 
   // ─── Load Subscriptions ────────────────────────────────────────────────────
   async function loadSubscriptions() {
+    if (isDemoMode) return;
     if (!userId) return;
-
     try {
       const res = await fetch(`${API}/subscriptions/${userId}`);
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
-
       renderSubscriptions(data.subscriptions);
       updateStats(data);
-
     } catch (e) {
       console.error('Failed to load subscriptions:', e);
     }
@@ -876,48 +928,38 @@
     const subs = data.subscriptions || [];
     const cancelled = subs.filter(s => s.status === 'cancelled').length;
     const active = subs.filter(s => ['active','urgent','queued'].includes(s.status)).length;
-    const urgent = data.urgent_count || 0;
-    const saved = subs
-      .filter(s => s.status === 'cancelled')
-      .reduce((acc, s) => acc + s.monthly_charge, 0);
-
+    const saved = subs.filter(s => s.status === 'cancelled').reduce((a, s) => a + s.monthly_charge, 0);
     document.getElementById('stat-saved').textContent = `$${saved.toFixed(0)}`;
     document.getElementById('stat-cancelled').textContent = cancelled;
     document.getElementById('stat-active').textContent = active;
-    document.getElementById('stat-upcoming').textContent = urgent;
+    document.getElementById('stat-upcoming').textContent = data.urgent_count || 0;
   }
 
-  function daysRemaining(trialEndDate) {
-    const diff = new Date(trialEndDate) - new Date();
-    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  function daysRemaining(dateStr) {
+    return Math.max(0, Math.ceil((new Date(dateStr) - new Date()) / 86400000));
   }
 
   function renderSubscriptions(subs) {
     const grid = document.getElementById('subs-grid');
     if (!subs || subs.length === 0) {
-      grid.innerHTML = `<div style="color:var(--muted);font-size:0.9rem;padding:32px 0;">
-        No subscriptions tracked yet. Connect Gmail and scan your inbox.
+      grid.innerHTML = `<div style="color:var(--muted);font-size:0.9rem;padding:32px 0;grid-column:span 2;">
+        No subscriptions yet. Connect Gmail and scan, or try Demo Mode.
       </div>`;
       return;
     }
 
     grid.innerHTML = subs.map(sub => {
       const days = daysRemaining(sub.trial_end_date);
-      const isUrgent = sub.status === 'urgent' || days <= 3;
       const isCancelled = sub.status === 'cancelled';
       const isQueued = sub.status === 'queued';
+      const isUrgent = !isCancelled && !isQueued && days <= 5;
 
       const cardClass = isCancelled ? 'cancelled' : isUrgent ? 'urgent' : 'safe';
-      const statusLabel = isCancelled ? 'CANCELLED' : isQueued ? 'QUEUED' : isUrgent ? `${days} DAYS LEFT` : `${days} DAYS LEFT`;
+      const statusLabel = isCancelled ? 'CANCELLED' : isQueued ? 'QUEUED' : `${days} DAYS LEFT`;
       const statusClass = isCancelled ? 'status-cancelled' : isQueued ? 'status-queued' : isUrgent ? 'status-urgent' : 'status-safe';
       const fillClass = isCancelled ? 'fill-safe' : isQueued ? 'fill-queued' : isUrgent ? 'fill-urgent' : 'fill-safe';
       const fillPct = Math.min(100, Math.max(5, Math.round((days / 30) * 100)));
-
       const expiry = new Date(sub.trial_end_date).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
-
-      const disabledAttr = isCancelled ? 'disabled' : '';
-      const queuedClass = isQueued ? 'queued' : '';
-      const queuedText = isQueued ? '⏳ Queued' : '⚡ Auto-Cancel';
 
       return `
         <div class="sub-card ${cardClass}" id="card-${sub.id}">
@@ -937,8 +979,8 @@
           </div>
           <div class="trial-bar"><div class="trial-bar-fill ${fillClass}" style="width:${fillPct}%"></div></div>
           <div class="sub-actions">
-            <button class="btn-cancel" onclick="cancelNow('${sub.id}', '${sub.service_name}')" ${disabledAttr}>✕ Cancel Now</button>
-            <button class="btn-auto ${queuedClass}" id="auto-${sub.id}" onclick="queueNova('${sub.id}', '${sub.service_name}')" ${isQueued || isCancelled ? 'disabled' : ''}>${queuedText}</button>
+            <button class="btn-cancel" onclick="cancelNow('${sub.id}','${sub.service_name}')" ${isCancelled?'disabled':''}>✕ Cancel Now</button>
+            <button class="btn-auto ${isQueued?'queued':''}" id="auto-${sub.id}" onclick="queueNova('${sub.id}','${sub.service_name}')" ${isQueued||isCancelled?'disabled':''}>${isQueued?'⏳ Queued':'⚡ Auto-Cancel'}</button>
           </div>
         </div>`;
     }).join('');
@@ -946,47 +988,48 @@
 
   // ─── Queue Auto-Cancel ─────────────────────────────────────────────────────
   async function queueNova(subId, name) {
-    if (!userId) return;
-    try {
-      const res = await fetch(`${API}/queue/${subId}?user_id=${userId}`, { method: 'POST' });
-      if (!res.ok) throw new Error(await res.text());
-
+    if (isDemoMode) {
       const btn = document.getElementById(`auto-${subId}`);
       if (btn) { btn.classList.add('queued'); btn.textContent = '⏳ Queued'; btn.disabled = true; }
-
+      const card = document.getElementById(`card-${subId}`);
+      if (card) { card.querySelector('.sub-status').className = 'sub-status status-queued'; card.querySelector('.sub-status').textContent = 'QUEUED'; }
       showToast(`⚡ ${name} queued — Nova Act will auto-cancel before trial ends`);
+      return;
+    }
+    try {
+      await fetch(`${API}/queue/${subId}?user_id=${userId}`, { method: 'POST' });
+      showToast(`⚡ ${name} queued for auto-cancel`);
       await loadSubscriptions();
     } catch (e) {
-      showToast(`❌ Could not queue: ${e.message}`, 'error');
+      showToast(`❌ ${e.message}`, 'error');
     }
   }
 
-  // ─── Cancel Now (Nova Act) ─────────────────────────────────────────────────
+  // ─── Cancel Now ────────────────────────────────────────────────────────────
   function cancelNow(subId, name) {
     activeSubId = subId;
     document.getElementById('modal-title').textContent = `🤖 Nova Act: Cancelling ${name}`;
     document.getElementById('modal-desc').textContent =
-      `Nova Act will navigate to ${name}'s cancellation page and complete the process automatically.`;
-    resetModalProgress();
-    document.getElementById('modal').classList.add('active');
-  }
-
-  function resetModalProgress() {
+      `Nova Act agent will navigate to ${name}'s account page and complete the cancellation automatically.`;
     document.getElementById('modal-progress').innerHTML = `
       <div>○ Launching Nova Act browser agent</div>
       <div>○ Navigating to cancellation page</div>
       <div>○ Locating cancel button</div>
       <div>○ Confirming cancellation</div>
-      <div>○ Saving confirmation</div>`;
+      <div>○ Saving confirmation screenshot</div>`;
+    document.getElementById('modal').classList.add('active');
   }
 
   async function completeCancel() {
-    if (!userId || !activeSubId) return;
     closeModal();
 
-    showToast('🤖 Nova Act agent launched...');
-    appendLog('action', `→ Firing Nova Act cancellation agent...`);
+    if (isDemoMode) {
+      runDemoCancel(activeSubId);
+      return;
+    }
 
+    if (!userId || !activeSubId) return;
+    showToast('🤖 Nova Act agent launched...');
     try {
       const res = await fetch(`${API}/cancel`, {
         method: 'POST',
@@ -995,82 +1038,110 @@
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
-
       activeJobId = data.job_id;
-      appendLog('action', `→ Job started: ${activeJobId}`);
-
-      // Begin polling job status
       startJobPolling(activeJobId);
-
     } catch (e) {
-      showToast(`❌ Failed to start agent: ${e.message}`, 'error');
-      appendLog('warn', `⚠ Cancellation failed: ${e.message}`);
+      showToast(`❌ ${e.message}`, 'error');
     }
   }
 
-  // ─── Job Polling ───────────────────────────────────────────────────────────
+  // ─── Demo Cancel Animation ─────────────────────────────────────────────────
+  function runDemoCancel(subId) {
+    const sub = DEMO_SUBS.find(s => s.id === subId);
+    const name = sub ? sub.service_name : 'Service';
+
+    appendLog('action', `→ Nova Act agent launched for ${name}...`);
+
+    // Animate nova panel steps one by one
+    const container = document.getElementById('agent-steps');
+    container.innerHTML = '';
+
+    let stepIndex = 0;
+    const interval = setInterval(() => {
+      if (stepIndex >= DEMO_CANCEL_STEPS.length) {
+        clearInterval(interval);
+
+        // Mark card as cancelled
+        const card = document.getElementById(`card-${subId}`);
+        if (card) {
+          card.classList.remove('urgent', 'safe');
+          card.classList.add('cancelled');
+          card.querySelector('.sub-status').className = 'sub-status status-cancelled';
+          card.querySelector('.sub-status').textContent = 'CANCELLED';
+          card.querySelectorAll('button').forEach(b => b.disabled = true);
+        }
+
+        // Update stats
+        const cancelled = document.getElementById('stat-cancelled');
+        const active = document.getElementById('stat-active');
+        cancelled.textContent = parseInt(cancelled.textContent) + 1;
+        active.textContent = Math.max(0, parseInt(active.textContent) - 1);
+
+        const charge = sub ? `$${sub.monthly_charge.toFixed(2)}` : '';
+        showToast(`✅ ${name} cancelled! You saved ${charge}/mo`);
+        appendLog('found', `✓ ${name} cancelled — confirmation saved`);
+
+        document.querySelector('.nova-panel .badge-nova').textContent = 'COMPLETE ✓';
+        return;
+      }
+
+      // Add completed steps
+      for (let i = 0; i <= stepIndex; i++) {
+        const s = DEMO_CANCEL_STEPS[i];
+        const isActive = i === stepIndex;
+        const isDone = i < stepIndex;
+        const numClass = isDone ? 'step-done' : isActive ? 'step-active' : 'step-pending';
+        const numText = isDone ? '✓' : (i + 1);
+        const descClass = isDone ? 'done' : isActive ? 'active' : '';
+
+        if (i === 0) container.innerHTML = '';
+        container.innerHTML += `
+          <div class="agent-step">
+            <div class="step-num ${numClass}">${numText}</div>
+            <div class="step-content">
+              <div class="step-title">Step ${i + 1}</div>
+              <div class="step-desc ${descClass}">${s.text}</div>
+            </div>
+          </div>`;
+      }
+
+      document.querySelector('.nova-panel .badge-nova').textContent = 'AGENT ACTIVE';
+      stepIndex++;
+    }, 700);
+  }
+
+  // ─── Job Polling (real mode) ───────────────────────────────────────────────
   function startJobPolling(jobId) {
     if (jobPollInterval) clearInterval(jobPollInterval);
-
     jobPollInterval = setInterval(async () => {
       try {
         const res = await fetch(`${API}/jobs/${jobId}?user_id=${userId}`);
         if (!res.ok) return;
         const job = await res.json();
-
         updateNovaPanel(job);
-
-        if (['success', 'failed', 'requires_human'].includes(job.status)) {
+        if (['success','failed','requires_human'].includes(job.status)) {
           clearInterval(jobPollInterval);
           jobPollInterval = null;
-
-          if (job.status === 'success') {
-            showToast(`✅ ${job.message}`);
-            appendLog('found', `✓ ${job.message}`);
-          } else if (job.status === 'requires_human') {
-            showToast('⚠ Agent needs your help — check the service manually', 'error');
-            appendLog('warn', `⚠ ${job.message}`);
-          } else {
-            showToast(`❌ ${job.message}`, 'error');
-            appendLog('warn', `⚠ ${job.message}`);
-          }
-
+          showToast(job.status === 'success' ? `✅ ${job.message}` : `⚠ ${job.message}`, job.status === 'success' ? 'success' : 'error');
           await loadSubscriptions();
         }
-      } catch (e) {
-        console.error('Polling error:', e);
-      }
-    }, 2000); // poll every 2 seconds
+      } catch (e) { console.error(e); }
+    }, 2000);
   }
 
   function updateNovaPanel(job) {
-    const steps = job.steps_completed || [];
     const container = document.getElementById('agent-steps');
-
-    // Rebuild steps from real job log
-    container.innerHTML = steps.map((step, i) => {
-      const isLast = i === steps.length - 1;
+    container.innerHTML = (job.steps_completed || []).map((step, i) => {
+      const isLast = i === job.steps_completed.length - 1;
       const isDone = !isLast || job.status === 'success';
-      const numClass = isDone ? 'step-done' : 'step-active';
-      const numText = isDone ? '✓' : (i + 1);
-      const descClass = isDone ? 'done' : 'active';
-
-      return `
-        <div class="agent-step">
-          <div class="step-num ${numClass}">${numText}</div>
-          <div class="step-content">
-            <div class="step-title">Step ${i + 1}</div>
-            <div class="step-desc ${descClass}">${step}</div>
-          </div>
-        </div>`;
+      return `<div class="agent-step">
+        <div class="step-num ${isDone ? 'step-done' : 'step-active'}">${isDone ? '✓' : i+1}</div>
+        <div class="step-content">
+          <div class="step-title">Step ${i+1}</div>
+          <div class="step-desc ${isDone ? 'done' : 'active'}">${step}</div>
+        </div>
+      </div>`;
     }).join('');
-
-    // Update badge
-    const badge = document.querySelector('.nova-panel .badge-nova');
-    if (badge) {
-      const labels = { pending: 'QUEUED', in_progress: 'AGENT ACTIVE', success: 'COMPLETE', failed: 'FAILED', requires_human: 'NEEDS HELP' };
-      badge.textContent = labels[job.status] || job.status.toUpperCase();
-    }
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -1078,15 +1149,9 @@
     document.getElementById('modal').classList.remove('active');
   }
 
-  function showDemo() {
-    appendLog('action', '→ Demo mode — showing sample data...');
-    showToast('👀 Demo mode — connect Gmail for real data');
-  }
-
   function showToast(msg, type = 'success') {
     const toast = document.getElementById('toast');
-    const icon = document.querySelector('.toast-icon');
-    icon.textContent = type === 'error' ? '❌' : '✅';
+    document.querySelector('.toast-icon').textContent = type === 'error' ? '⚠️' : '✅';
     document.getElementById('toast-msg').textContent = msg;
     toast.classList.add('show');
     setTimeout(() => toast.classList.remove('show'), 4000);
